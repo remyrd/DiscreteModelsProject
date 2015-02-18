@@ -256,7 +256,24 @@ class ProcessAssignment:
 				self.assignment[process] = int(tokens[process])
 		# debug
 		print("LOG: finished reading assignment")
-
+		
+### TODO ##############################	
+	
+	def probe_neighbor(self):
+		
+		#see what is the least moving cost, then swap processes machines if possible
+		min_move_cost = index_of.min(self.process_moving_costs) #index of the process with least moving cost
+		
+		
+		for i in range(0,self.num_machines): #for all machines look for candidates
+			"""Check for constraint Satisfaction"""
+			if ((self.process_services[i] != self.process_services[min_move_cost]) #SCCon
+				&& () #SSCon
+				&& ()) #MCCon
+				
+		
+		
+##########################################
 
 def dump_assignment(assignment, filename=None, mode='w'):
 	"""Writes an assignment in human-readable format to a given file or 
