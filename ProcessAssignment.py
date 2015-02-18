@@ -266,13 +266,12 @@ class ProcessAssignment:
 		
 		
 		for i in range(0,self.num_machines): #for all machines look for candidates
-			"""Check for constraint Satisfaction"""
-			if ((self.process_services[i] != self.process_services[min_move_cost]) #SCCon
-				&& () #SSCon
-				&& ()) #MCCon
-				
+			if  SCCon(self, i, min_move_cost):#SCCon
 		
-		
+	def eval_SCCon(self, a, b):
+		return (self.process_services[a] != self.process_services[b])
+	
+	
 ##########################################
 
 def dump_assignment(assignment, filename=None, mode='w'):
