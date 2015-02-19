@@ -270,30 +270,41 @@ class ProcessAssignment:
 		#find candidate machines CONSTRAINTS apply
 		candidate_machines = []
 		for machine in xrange(self.num_machines):
-			if test_constraints(min_move_cost_proc,machine):
+			if try_constraints(min_move_cost_proc,machine):
 				candidate_machines.append(machine)
 		
-	def test_constraints(self, process, machine):
-		"""Test constraints for a process to go into a machine"""
+	def try_constraints(self, process, machine):
+		"""Try constraints for allowing a process into a machine"""
 		# SCCon
-		sccon = False
-		shared_proc = self.shared_processes(machine)
-		for i in xrange(shared_proc):
-			if self.process_services[process] != self.process_services[shared_proc[i]]
-				sccon = True
+		sccon = True
+		shared_proc_machine = self.shared_processes(machine,self.assignment)
+		for i in xrange(shared_proc_machine):
+			if self.process_services[process] == self.process_services[shared_proc_machine[i]]
+				sccon = False
 		# SSCon	
-		sscon = False
-		# MLCon
-		mlcon = False
+		sscon = True
+		if self.service_min_spreads[self.process_services[process]]>1 :
+			for i in xrange(shared_proc_machine):
+				if self.process_services[process] == self.process_services[i]
+					sscon = verify_service_span(process)
 		
-		return (mlcon & sccon & sscon)
+		# MCCon
+		mccon = False
+		
+		return (mccon & sccon & sscon)
 	
-	
-	def shared_processes(self,machine):
-		"""Search for processes in a given machine"""
+	def verify_service_span(self, process):
+		shared_proc_service = self.shared_processes(process, self.process_services)
+		shared_proc_service.pop(process) #don't want to include process being evaluated
+		for i in xrange(shared_proc_service):
+			# TODO
+			# define different machines, then different locations, then conclude
+		return True
+	def shared_processes(self,target_element,target_list):
+		"""Search for processes with a common element"""
 		shared_processes = []
 		for process in xrange(self.num_processes):
-			if self.assignment[process] == machine:
+			if target_list[process] == target_element:
 				shared_processes.append(process)
 		return shared_processes
 #====================================
