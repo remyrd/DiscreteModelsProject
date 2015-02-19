@@ -10,7 +10,6 @@
 
 from __future__ import print_function
 import sys
-#from numpy import append
 
 # Just some useful exceptions to raise during parsing
 class InstanceError(BaseException):
@@ -263,31 +262,17 @@ class ProcessAssignment:
 #===================================	
 	
 	def probe_neighbor(self):
-		"""see what is the least moving cost, then swap processes machines if possible"""
-		 #process with least moving cost
-		min_move_cost_proc = self.process_moving_costs.index(min(self.process_moving_costs))
 		
-		#find candidate machines CONSTRAINTS apply
-		candidate_machines = []
-		for machine in xrange(self.num_machines):
-			if test_constraints(min_move_cost_proc,machine):
-				candidate_machines.append(machine)
+		#see what is the least moving cost, then swap processes machines if possible
+		min_move_cost = index_of.min(self.process_moving_costs) #process with least moving cost
+		print ("the minimum cost machine is ", min_move_cost)
 		
-	def test_constraints(self, process, machine):
+		
+	def test_constraints(self, process_a, process_b):
 		# SCCon
-		sccon = False
-		shared_proc = self.shared_processes(machine)
-		if self.process_services[process] != self.process_services[shared_proc]
-			sccon = True
+		sccon = (self.process_services[process_a] != self.process_services[process_b])
 		# SSCon	
 	
-	def shared_processes(self,machine):
-		"""Search for processes in a given machine"""
-		shared_processes = []
-		for process in xrange(self.num_processes):
-			if self.assignment[process] == machine:
-				shared_processes.append(process)
-		return shared_processes
 #====================================
 
 def dump_assignment(assignment, filename=None, mode='w'):
