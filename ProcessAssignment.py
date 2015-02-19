@@ -274,12 +274,20 @@ class ProcessAssignment:
 				candidate_machines.append(machine)
 		
 	def test_constraints(self, process, machine):
+		"""Test constraints for a process to go into a machine"""
 		# SCCon
 		sccon = False
 		shared_proc = self.shared_processes(machine)
-		if self.process_services[process] != self.process_services[shared_proc]
-			sccon = True
+		for i in xrange(shared_proc):
+			if self.process_services[process] != self.process_services[shared_proc[i]]
+				sccon = True
 		# SSCon	
+		sscon = False
+		# MLCon
+		mlcon = False
+		
+		return (mlcon & sccon & sscon)
+	
 	
 	def shared_processes(self,machine):
 		"""Search for processes in a given machine"""
