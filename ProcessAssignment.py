@@ -258,9 +258,9 @@ class ProcessAssignment:
 		# debug
 		print("LOG: finished reading assignment")
 		
-#=================================== 
+#======================================================================
 # TODO 
-#===================================	
+#======================================================================	
 	
 	def probe_neighbor(self):
 		"""see what is the least moving cost, then swap processes machines if possible"""
@@ -271,6 +271,7 @@ class ProcessAssignment:
 		candidate_machines = []
 		for machine in xrange(self.num_machines):
 			if try_constraints(min_move_cost_proc,machine):
+				print("we found one candidate! process ",min_move_cost_proc," can go to machine ",machine)
 				candidate_machines.append(machine)
 		
 	def try_constraints(self, process, machine):
@@ -278,28 +279,30 @@ class ProcessAssignment:
 		# SCCon
 		sccon = True
 		shared_proc_machine = self.shared_processes(machine,self.assignment)
-		for i in xrange(shared_proc_machine):
+		for i in xrange(shared_proc_machine._len_()):
 			if self.process_services[process] == self.process_services[shared_proc_machine[i]]:
 				sccon = False
+				print ("SCCon unsatisfied for ",process," in machine ",machine)
 				return False 
 		# SSCon	
 		sscon = True
 		if self.service_min_spreads[self.process_services[process]]>1 : # is it necessary?
 			sscon = verify_service_spread(process, machine)
 			if sscon == False :
+				print ("SSCon unsatisfied for ",process," in machine ",machine)
 				return False
 		
 		# MCCon
 		mccon = True
-		
+		if shared_proc_machine.
 		return (mccon & sccon & sscon)
 	
 	def verify_service_spread(self, process, machine):
 		"""Verify if the minimum service spread is still OK when moving a process to a new machine"""
 		shared_proc_service = self.shared_processes(process, self.process_services) # processes with the same service
-		shared_proc_service.pop(process) # don't want to include process being evaluated since it moves
+		shared_proc_service.remove(process) # don't want to include process being evaluated since it moves
 		location_list = [self.machine_locations[machine]] # add the location of the instanced machine at the beginning
-		for i in xrange(shared_proc_service):
+		for i in xrange(shared_proc_service._len_()):
 			if self.machine_locations[self.assignment[i]] not in location_list:# if we find a new location, add it to the list
 				location_list.append(self.machine_locations[self.assignment[i]])
 		return (location_list.__len__() <= self.service_min_spreads[self.process_services[process]])
@@ -311,7 +314,7 @@ class ProcessAssignment:
 			if target_list[process] == target_element:
 				shared_processes.append(process)
 		return shared_processes
-#====================================
+#=======================================================================
 
 def dump_assignment(assignment, filename=None, mode='w'):
 	"""Writes an assignment in human-readable format to a given file or 
