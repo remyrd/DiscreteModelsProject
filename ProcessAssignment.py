@@ -279,27 +279,31 @@ class ProcessAssignment:
 		sccon = True
 		shared_proc_machine = self.shared_processes(machine,self.assignment)
 		for i in xrange(shared_proc_machine):
-			if self.process_services[process] == self.process_services[shared_proc_machine[i]]
+			if self.process_services[process] == self.process_services[shared_proc_machine[i]]:
 				sccon = False
+				return False 
 		# SSCon	
 		sscon = True
-		if self.service_min_spreads[self.process_services[process]]>1 :
-			for i in xrange(shared_proc_machine):
-				if self.process_services[process] == self.process_services[i]
-					sscon = verify_service_span(process)
+		if self.service_min_spreads[self.process_services[process]]>1 : # is it necessary?
+			sscon = verify_service_spread(process, machine)
+			if sscon == False :
+				return False
 		
 		# MCCon
-		mccon = False
+		mccon = True
 		
 		return (mccon & sccon & sscon)
 	
-	def verify_service_span(self, process):
-		shared_proc_service = self.shared_processes(process, self.process_services)
-		shared_proc_service.pop(process) #don't want to include process being evaluated
+	def verify_service_spread(self, process, machine):
+		"""Verify if the minimum service spread is still OK when moving a process to a new machine"""
+		shared_proc_service = self.shared_processes(process, self.process_services) # processes with the same service
+		shared_proc_service.pop(process) # don't want to include process being evaluated since it moves
+		location_list = [self.machine_locations[machine]] # add the location of the instanced machine at the beginning
 		for i in xrange(shared_proc_service):
-			# TODO
-			# define different machines, then different locations, then conclude
-		return True
+			if self.machine_locations[self.assignment[i]] not in location_list:# if we find a new location, add it to the list
+				location_list.append(self.machine_locations[self.assignment[i]])
+		return (location_list.__len__() <= self.service_min_spreads[self.process_services[process]])
+	
 	def shared_processes(self,target_element,target_list):
 		"""Search for processes with a common element"""
 		shared_processes = []
