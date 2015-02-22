@@ -10,7 +10,6 @@
 
 from __future__ import print_function
 import sys
-#from numpy import append
 
 # Just some useful exceptions to raise during parsing
 class InstanceError(BaseException):
@@ -257,83 +256,7 @@ class ProcessAssignment:
 				self.assignment[process] = int(tokens[process])
 		# debug
 		print("LOG: finished reading assignment")
-		
-#======================================================================
-# TODO 
-#======================================================================	
-	
-	def shared_processes(self,target_element,target_list):
-		"""Search for processe with a common element"""
-		shared_processes = []
-		for process in xrange(self.num_processes):
-			if target_list[process] == target_element:
-				shared_processes.append(process)
-	
-		return shared_processes
 
-
-	def verify_service_spread(self, process, machine):
-		"""Verify if the minimum service spread is still OK when moving a process to a new machine"""
-		shared_proc_service = self.shared_processes(process, self.process_services) # processes with the same service
-		shared_proc_service.remove(process) # don't want to include process being evaluated since it moves
-		location_list = [self.machine_locations[machine]] # add the location of the instanced machine at the beginning
-		for i in xrange(shared_proc_service.__len__()):
-			if self.machine_locations[self.assignment[i]] not in location_list:# if we find a new location, add it to the list
-				location_list.append(self.machine_locations[self.assignment[i]])
-		return (location_list.__len__() <= self.service_min_spreads[self.process_services[process]])
-	
-	def try_constraints(self, process, machine):
-		"""Try constraints for allowing a process into a machine"""
-		# SCCon
-		sccon = True
-		shared_proc_machine = self.shared_processes(machine,self.assignment)
-		for i in xrange(shared_proc_machine.__len__()):
-			if self.process_services[process] == self.process_services[shared_proc_machine[i]]:
-				sccon = False
-				print ("SCCon unsatisfied for ",process," in machine ",machine)
-				return False 
-		# SSCon	
-		sscon = True
-		if self.service_min_spreads[self.process_services[process]]>1 : # is it necessary?
-			sscon = self.verify_service_spread(process, machine)
-			if sscon == False :
-				print ("SSCon unsatisfied for ",process," in machine ",machine)
-				return False
-		
-		# MCCon
-		mccon = True
-		machine_capacity = self.machine_capacities[machine]
-		local_process_cost = [0] * machine_capacity.__len__() #sum of the processes in a machine
-		shared_proc_machine.append(process) #include the process to be moved
-		for i in xrange(shared_proc_machine.__len__()):
-			for j in xrange(machine_capacity.__len__()):
-				local_process_cost[j] += self.process_requirements[i][j] #process i, resource j
-		for j in xrange(machine_capacity.__len__()):
-			if local_process_cost[j] > machine_capacity[j]:
-				mccon = False
-				return False
-		
-		return (mccon & sccon & sscon)	
-	
-
-	def probe_neighbor(self):
-		"""see what is the least moving cost, then swap processes machines if possible"""
-		 #process with least moving cost
-		min_move_cost_proc = self.process_moving_costs.index(min(self.process_moving_costs))
-		
-		#find candidate machines CONSTRAINTS apply
-		candidate_machines = []
-		for machine in xrange(self.num_machines):
-			if self.try_constraints(min_move_cost_proc,machine):
-				print("we found one candidate! process ",min_move_cost_proc," can go to machine ",machine)
-				candidate_machines.append(machine)
-		
-
-	
-
-	
-	
-#=======================================================================
 
 def dump_assignment(assignment, filename=None, mode='w'):
 	"""Writes an assignment in human-readable format to a given file or 
@@ -375,7 +298,7 @@ if __name__ == "__main__":
 			print("Could not load the initial assignment.", file=sys.stderr)
 			print(repr(e), file=sys.stderr)
 			sys.exit(1)
-		assignment.probe_neighbor()
+
 		# Print a representation of the instance and the assignment 
                 # to the given <output_file>
 		if len(sys.argv) == 3:
