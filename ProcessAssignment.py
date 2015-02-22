@@ -311,6 +311,7 @@ class ProcessAssignment:
 		for j in xrange(machine_capacity.__len__()):
 			if local_process_cost[j] > machine_capacity[j]:
 				mccon = False
+				print ("MCCon unsatisfied for ", process," in machine ",machine)
 				return False
 		
 		return (mccon & sccon & sscon)	
