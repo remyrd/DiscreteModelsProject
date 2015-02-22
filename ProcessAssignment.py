@@ -294,7 +294,17 @@ class ProcessAssignment:
 		
 		# MCCon
 		mccon = True
-		if shared_proc_machine.
+		machine_capacity = self.machine_capacities[machine]
+		local_process_cost = [] #sum of the processes in a machine
+		shared_proc_machine.append(process) #include the process to be moved
+		for i in xrange(shared_proc_machine.__len__())
+			for j in xrange(machine_capacity.__len__())
+				local_process_cost[j] += self.process_requirements[i][j] #process i, resource j
+		for j in xrange(machine_capacity.__len__())
+			if local_process_cost[j] > machine_capacity[j]
+				mccon = False
+				return False
+		
 		return (mccon & sccon & sscon)
 	
 	def verify_service_spread(self, process, machine):
