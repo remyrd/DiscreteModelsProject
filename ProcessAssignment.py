@@ -277,41 +277,46 @@ class ProcessAssignment:
 		shared_proc_service = self.shared_processes(process, self.process_services) # processes with the same service
 		shared_proc_service.remove(process) # don't want to include process being evaluated since it moves
 		location_list = [self.machine_locations[machine]] # add the location of the instanced machine at the beginning
+		print("process ",process," belongs to service ",self.process_services[process])
+		print("service min spread ",self.service_min_spreads[self.process_services[process]])
 		for i in xrange(shared_proc_service.__len__()):
 			if self.machine_locations[self.assignment[i]] not in location_list:# if we find a new location, add it to the list
 				location_list.append(self.machine_locations[self.assignment[i]])
+			print("locations list ",location_list)
 		return (location_list.__len__() <= self.service_min_spreads[self.process_services[process]])
 	
 	def try_constraints(self, process, machine):
 		"""Try constraints for allowing a process into a machine"""
-		# SCCon
-		sccon = True
-		shared_proc_machine = self.shared_processes(machine,self.assignment)
-		for i in xrange(shared_proc_machine.__len__()):
-			if self.process_services[process] == self.process_services[shared_proc_machine[i]]:
-				sccon = False
-				print ("SCCon unsatisfied for ",process," in machine ",machine)
-				return False 
-		# SSCon	
-		sscon = True
-		if self.service_min_spreads[self.process_services[process]]>1 : # is it necessary?
-			sscon = self.verify_service_spread(process, machine)
-			if sscon == False :
-				print ("SSCon unsatisfied for ",process," in machine ",machine)
-				return False
-		
 		# MCCon
 		mccon = True
 		machine_capacity = self.machine_capacities[machine]
 		local_process_cost = [0] * machine_capacity.__len__() #sum of the processes in a machine
-		shared_proc_machine.append(process) #include the process to be moved
+		shared_proc_machine = self.shared_processes(machine,self.assignment)
+		if process not in shared_proc_machine:
+			shared_proc_machine.append(process) #include the process to be moved
 		for i in xrange(shared_proc_machine.__len__()):
 			for j in xrange(machine_capacity.__len__()):
 				local_process_cost[j] += self.process_requirements[i][j] #process i, resource j
 		for j in xrange(machine_capacity.__len__()):
 			if local_process_cost[j] > machine_capacity[j]:
 				mccon = False
-				print ("MCCon unsatisfied for ", process," in machine ",machine)
+				#print ("MCCon unsatisfied for ", process," in machine ",machine)
+				return False
+		
+		# SCCon
+		sccon = True
+		shared_proc_machine = self.shared_processes(machine,self.assignment)
+		for i in xrange(shared_proc_machine.__len__()):
+			if self.process_services[process] == self.process_services[shared_proc_machine[i]]:
+				sccon = False
+				#print ("SCCon unsatisfied for ",process," in machine ",machine)
+				return False 
+		# SSCon	
+		sscon = True
+		if self.service_min_spreads[self.process_services[process]]>1 : # is it necessary?
+			sscon = self.verify_service_spread(process, machine)
+			if sscon == False :
+				#print ("SSCon unsatisfied for ",process," in machine ",machine)
 				return False
 		
 		return (mccon & sccon & sscon)	
