@@ -149,7 +149,7 @@ class ProcessAssignment:
 				tokens = instancefile.readline().strip().split()
 
 				if len(tokens) != (1 + 2 * self.num_resources):
-					raise InstanceError("Wrong number of values (expected %d, found %d)" % (1 + 2 * num_resources, len(tokens)))
+					raise InstanceError("Wrong number of values (expected %d, found %d)" % (1 + 2 * self.num_resources, len(tokens)))
 
 				# First, read the machine location
 				location = int(tokens[0])
@@ -214,7 +214,7 @@ class ProcessAssignment:
 				tokens = instancefile.readline().strip().split()
 
 				if len(tokens) != (2 + self.num_resources):
-					raise InstanceError("Wrong number of values (expected %d, found %d)" % (2 + num_resources, len(tokens)))
+					raise InstanceError("Wrong number of values (expected %d, found %d)" % (2 + self.num_resources, len(tokens)))
 
 				# First, read the service this process 
                                 # belongs to
@@ -271,7 +271,6 @@ class ProcessAssignment:
 	
 		return shared_processes
 
-
 	def verify_service_spread(self, process, machine):
 		"""Verify if the minimum service spread is still OK when moving a process to a new machine"""
 		shared_proc_service = self.shared_processes(process, self.process_services) # processes with the same service
@@ -321,7 +320,6 @@ class ProcessAssignment:
 		
 		return (mccon & sccon & sscon)	
 	
-
 	def probe_neighbor(self):
 		"""see what is the least moving cost, then swap processes machines if possible"""
 		 #process with least moving cost
@@ -329,16 +327,58 @@ class ProcessAssignment:
 		
 		#find candidate machines CONSTRAINTS apply
 		candidate_machines = []
+		costs = []
 		for machine in xrange(self.num_machines):
 			if self.try_constraints(min_move_cost_proc,machine):
-				print("we found one candidate! process ",min_move_cost_proc," can go to machine ",machine)
 				candidate_machines.append(machine)
+				costs.append(self.calculate_costs(min_move_cost_proc,machine))
+		print("we found ",candidate_machines.__len__()," candidates! process ",min_move_cost_proc," can go to machines ",candidate_machines)
+		print("the costs are ",costs)	
+	
+	def calculate_costs(self, process, machine, assignment = None):
+		"""Calculates the cost difference for moving a process to a new machine.
+		Positive -> bad, new configuration costs more
+		Negative -> good, new configuration costs less"""
+		if not assignment: #the current assignment! not the one for which costs are calculated
+			assignment = self.assignment
 		
-
+		moving_cost = self.process_moving_costs[process]
+		total_cost = moving_cost
+		
+		machineload_cost_old = [0] * self.machine_capacities[0].__len__()
+		machineload_cost_new = [0] * self.machine_capacities[0].__len__()
+		process_cost = self.process_requirements[process]
+		shared_proc_machine_old = self.shared_processes(assignment[process],assignment) #processes in the old machine
+		shared_proc_machine_new = self.shared_processes(machine, assignment) #processes in the new machine
+		
+		#costs in new and old machine before moving process
+		for i in xrange(shared_proc_machine_old.__len__()):
+			for j in xrange(self.machine_capacities[0].__len__()):
+				machineload_cost_old[j] += self.process_requirements[i][j]
+		
+		for i in xrange(shared_proc_machine_new.__len__()):
+			for j in xrange(self.machine_capacities[0].__len__()):
+				machineload_cost_new[j] += self.process_requirements[i][j]
 	
-
-	
-	
+		#check if soft capacities lower limit is reached
+		for j in xrange(self.machine_capacities[0].__len__()):
+			if (machineload_cost_old[j]-process_cost[j])>self.soft_machine_capacities[assignment[process]][j]: #assigment[process] = old machine
+				#don't remove too much cost, only until soft capacities limit
+				total_cost -= machineload_cost_old[j] - self.soft_machine_capacities[assignment[process]][j]
+			else:
+				#soft capacities not reached, remove whole cost
+				total_cost -= process_cost[j]
+		
+		#check if soft capacities upper limit is reached
+		for j in xrange(self.machine_capacities[0].__len__()):
+			if machineload_cost_new[j] > self.soft_machine_capacities[machine][j]:
+				total_cost += process_cost[j]
+			else:
+				total_cost += machineload_cost_new[j] + process_cost[j] - self.soft_machine_capacities[machine][j]
+		
+		return total_cost
+				
+				
 #=======================================================================
 
 def dump_assignment(assignment, filename=None, mode='w'):
@@ -383,7 +423,7 @@ if __name__ == "__main__":
 			sys.exit(1)
 		assignment.probe_neighbor()
 		# Print a representation of the instance and the assignment 
-                # to the given <output_file>
+        # to the given <output_file>
 		if len(sys.argv) == 3:
 			# Print to stdout
 			outfile = None
