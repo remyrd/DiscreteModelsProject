@@ -320,21 +320,19 @@ def try_constraints(proc_assignment, process, machine):
 	
 	return (mccon & sccon & sscon)	
 
-def calculate_costs(proc_assignment, process, machine, assignment = None):
+def calculate_costs(proc_assignment, process, machine):
 	"""Calculates the cost difference for moving a process to a new machine.
 	Positive -> bad, new configuration costs more
 	Negative -> good, new configuration costs less"""
-	if not assignment: #the current assignment! not the one for which costs are calculated
-		assignment = proc_assignment.assignment
-	
+
 	moving_cost = proc_assignment.process_moving_costs[process]
 	total_cost = moving_cost
 	
 	machineload_cost_old = [0] * proc_assignment.machine_capacities[0].__len__()
 	machineload_cost_new = [0] * proc_assignment.machine_capacities[0].__len__()
 	process_cost = proc_assignment.process_requirements[process]
-	shared_proc_machine_old = shared_processes(proc_assignment, assignment[process],assignment) #processes in the old machine
-	shared_proc_machine_new = shared_processes(proc_assignment, machine, assignment) #processes in the new machine
+	shared_proc_machine_old = shared_processes(proc_assignment, proc_assignment.assignment[process],proc_assignment.assignment) #processes in the old machine
+	shared_proc_machine_new = shared_processes(proc_assignment, machine, proc_assignment.assignment) #processes in the new machine
 	
 	#costs in new and old machine before moving process
 	for i in xrange(shared_proc_machine_old.__len__()):
@@ -347,9 +345,9 @@ def calculate_costs(proc_assignment, process, machine, assignment = None):
 
 	#check if soft capacities lower limit is reached
 	for j in xrange(proc_assignment.machine_capacities[0].__len__()):
-		if (machineload_cost_old[j]-process_cost[j])>proc_assignment.soft_machine_capacities[assignment[process]][j]: #assigment[process] = old machine
+		if (machineload_cost_old[j]-process_cost[j])>proc_assignment.soft_machine_capacities[proc_assignment.assignment[process]][j]: #assigment[process] = old machine
 			#don't remove too much cost, only until soft capacities limit
-			total_cost -= machineload_cost_old[j] - proc_assignment.soft_machine_capacities[assignment[process]][j]
+			total_cost -= machineload_cost_old[j] - proc_assignment.soft_machine_capacities[proc_assignment.assignment[process]][j]
 		else:
 			#soft capacities not reached, remove whole cost
 			total_cost -= process_cost[j]
@@ -364,23 +362,36 @@ def calculate_costs(proc_assignment, process, machine, assignment = None):
 	return total_cost
 				
 	
-def probe_neighbor(proc_assignment):
+def probe_neighbor(proc_assignment, min_move_cost_proc=None):
 	"""see what is the least moving cost, then swap processes machines if possible"""
-	 #process with least moving cost
-	min_move_cost_proc = proc_assignment.process_moving_costs.index(min(proc_assignment.process_moving_costs))
+	 #process with least moving cost specified? if not, find one
+	if not min_move_cost_proc:
+		min_move_cost_proc = proc_assignment.process_moving_costs.index(min(proc_assignment.process_moving_costs))
 	
-	#find candidate machines CONSTRAINTS apply
+	print("currently evaluating ",proc_assignment.assignment)
+	#find candidate machines CONSTRAINTS apply and calculate COSTS
 	candidate_machines = []
 	costs = []
+	
 	for machine in xrange(proc_assignment.num_machines):
 		if try_constraints(proc_assignment, min_move_cost_proc,machine):
-			candidate_machines.append(machine)
-			costs.append(calculate_costs(proc_assignment, min_move_cost_proc,machine))
+			if calculate_costs(proc_assignment, min_move_cost_proc, machine)<0:
+				candidate_machines.append(machine)
+				costs.append(calculate_costs(proc_assignment, min_move_cost_proc,machine))
 	print("we found ",candidate_machines.__len__()," candidates! process ",min_move_cost_proc," can go to machines ",candidate_machines)
 	print("the costs are ",costs)	
+	
+	# candidate_machines --> [1, 3, 5, 9]
+	# costs --> [-25, 58, -220, 98]
+	# return only negative
+	candidate_assignments = [0] * candidate_machines.__len__()
+	for ass in xrange(candidate_machines.__len__()):
+		candidate_assignments[ass] = tuple([int(t) for t in proc_assignment.assignment[0:proc_assignment.assignment.__len__()]])
+		candidate_assignments[ass][min_move_cost_proc] = candidate_machines[ass]
+		print("second loop ",ass," ",candidate_assignments[ass])
+		
+	return candidate_assignments
 
-
-				
 #=======================================================================
 
 def dump_assignment(assignment, filename=None, mode='w'):
@@ -423,7 +434,12 @@ if __name__ == "__main__":
 			print("Could not load the initial assignment.", file=sys.stderr)
 			print(repr(e), file=sys.stderr)
 			sys.exit(1)
-		probe_neighbor(assignment)
+		
+# TODO ===============================================
+		some_candidates = probe_neighbor(assignment)
+		print("this? ",some_candidates[0])
+		
+# ====================================================		
 		# Print a representation of the instance and the assignment 
         # to the given <output_file>
 		if len(sys.argv) == 3:
