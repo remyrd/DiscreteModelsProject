@@ -262,122 +262,124 @@ class ProcessAssignment:
 # TODO 
 #======================================================================	
 	
-	def shared_processes(self,target_element,target_list):
-		"""Search for processe with a common element"""
-		shared_processes = []
-		for process in xrange(self.num_processes):
-			if target_list[process] == target_element:
-				shared_processes.append(process)
-	
-		return shared_processes
+def shared_processes(proc_assignment,target_element,target_list):
+	"""Search for processe with a common element"""
+	shared_processes = []
+	for process in xrange(proc_assignment.num_processes):
+		if target_list[process] == target_element:
+			shared_processes.append(process)
 
-	def verify_service_spread(self, process, machine):
-		"""Verify if the minimum service spread is still OK when moving a process to a new machine"""
-		shared_proc_service = self.shared_processes(process, self.process_services) # processes with the same service
-		shared_proc_service.remove(process) # don't want to include process being evaluated since it moves
-		location_list = [self.machine_locations[machine]] # add the location of the instanced machine at the beginning
-		print("process ",process," belongs to service ",self.process_services[process])
-		print("service min spread ",self.service_min_spreads[self.process_services[process]])
-		for i in xrange(shared_proc_service.__len__()):
-			if self.machine_locations[self.assignment[i]] not in location_list:# if we find a new location, add it to the list
-				location_list.append(self.machine_locations[self.assignment[i]])
-			print("locations list ",location_list)
-		return (location_list.__len__() <= self.service_min_spreads[self.process_services[process]])
+	return shared_processes
+
+def verify_service_spread(proc_assignment, process, machine):
+	"""Verify if the minimum service spread is still OK when moving a process to a new machine"""
+	shared_proc_service = shared_processes(proc_assignment, process, proc_assignment.process_services) # processes with the same service
+	shared_proc_service.remove(process) # don't want to include process being evaluated since it moves
+	location_list = [proc_assignment.machine_locations[machine]] # add the location of the instanced machine at the beginning
+	print("process ",process," belongs to service ",proc_assignment.process_services[process])
+	print("service min spread ",proc_assignment.service_min_spreads[proc_assignment.process_services[process]])
+	for i in xrange(shared_proc_service.__len__()):
+		if proc_assignment.machine_locations[proc_assignment.assignment[i]] not in location_list:# if we find a new location, add it to the list
+			location_list.append(proc_assignment.machine_locations[proc_assignment.assignment[i]])
+		print("locations list ",location_list)
+	return (location_list.__len__() <= proc_assignment.service_min_spreads[proc_assignment.process_services[process]])
 	
-	def try_constraints(self, process, machine):
-		"""Try constraints for allowing a process into a machine"""
-		# MCCon
-		mccon = True
-		machine_capacity = self.machine_capacities[machine]
-		local_process_cost = [0] * machine_capacity.__len__() #sum of the processes in a machine
-		shared_proc_machine = self.shared_processes(machine,self.assignment)
-		if process not in shared_proc_machine:
-			shared_proc_machine.append(process) #include the process to be moved
-		for i in xrange(shared_proc_machine.__len__()):
-			for j in xrange(machine_capacity.__len__()):
-				local_process_cost[j] += self.process_requirements[i][j] #process i, resource j
+def try_constraints(proc_assignment, process, machine):
+	"""Try constraints for allowing a process into a machine"""
+	# MCCon
+	mccon = True
+	machine_capacity = proc_assignment.machine_capacities[machine]
+	local_process_cost = [0] * machine_capacity.__len__() #sum of the processes in a machine
+	shared_proc_machine = shared_processes(proc_assignment, machine,proc_assignment.assignment)
+	if process not in shared_proc_machine:
+		shared_proc_machine.append(process) #include the process to be moved
+	for i in xrange(shared_proc_machine.__len__()):
 		for j in xrange(machine_capacity.__len__()):
-			if local_process_cost[j] > machine_capacity[j]:
-				mccon = False
-				#print ("MCCon unsatisfied for ", process," in machine ",machine)
-				return False
-		
-		# SCCon
-		sccon = True
-		shared_proc_machine = self.shared_processes(machine,self.assignment)
-		for i in xrange(shared_proc_machine.__len__()):
-			if self.process_services[process] == self.process_services[shared_proc_machine[i]]:
-				sccon = False
-				#print ("SCCon unsatisfied for ",process," in machine ",machine)
-				return False 
-		# SSCon	
-		sscon = True
-		if self.service_min_spreads[self.process_services[process]]>1 : # is it necessary?
-			sscon = self.verify_service_spread(process, machine)
-			if sscon == False :
-				#print ("SSCon unsatisfied for ",process," in machine ",machine)
-				return False
-		
-		return (mccon & sccon & sscon)	
+			local_process_cost[j] += proc_assignment.process_requirements[i][j] #process i, resource j
+	for j in xrange(machine_capacity.__len__()):
+		if local_process_cost[j] > machine_capacity[j]:
+			mccon = False
+			#print ("MCCon unsatisfied for ", process," in machine ",machine)
+			return False
 	
-	def probe_neighbor(self):
-		"""see what is the least moving cost, then swap processes machines if possible"""
-		 #process with least moving cost
-		min_move_cost_proc = self.process_moving_costs.index(min(self.process_moving_costs))
-		
-		#find candidate machines CONSTRAINTS apply
-		candidate_machines = []
-		costs = []
-		for machine in xrange(self.num_machines):
-			if self.try_constraints(min_move_cost_proc,machine):
-				candidate_machines.append(machine)
-				costs.append(self.calculate_costs(min_move_cost_proc,machine))
-		print("we found ",candidate_machines.__len__()," candidates! process ",min_move_cost_proc," can go to machines ",candidate_machines)
-		print("the costs are ",costs)	
+	# SCCon
+	sccon = True
+	shared_proc_machine = shared_processes(proc_assignment, machine,proc_assignment.assignment)
+	for i in xrange(shared_proc_machine.__len__()):
+		if proc_assignment.process_services[process] == proc_assignment.process_services[shared_proc_machine[i]]:
+			sccon = False
+			#print ("SCCon unsatisfied for ",process," in machine ",machine)
+			return False 
+	# SSCon	
+	sscon = True
+	if proc_assignment.service_min_spreads[proc_assignment.process_services[process]]>1 : # is it necessary?
+		sscon = verify_service_spread(proc_assignment, process, machine)
+		if sscon == False :
+			#print ("SSCon unsatisfied for ",process," in machine ",machine)
+			return False
 	
-	def calculate_costs(self, process, machine, assignment = None):
-		"""Calculates the cost difference for moving a process to a new machine.
-		Positive -> bad, new configuration costs more
-		Negative -> good, new configuration costs less"""
-		if not assignment: #the current assignment! not the one for which costs are calculated
-			assignment = self.assignment
-		
-		moving_cost = self.process_moving_costs[process]
-		total_cost = moving_cost
-		
-		machineload_cost_old = [0] * self.machine_capacities[0].__len__()
-		machineload_cost_new = [0] * self.machine_capacities[0].__len__()
-		process_cost = self.process_requirements[process]
-		shared_proc_machine_old = self.shared_processes(assignment[process],assignment) #processes in the old machine
-		shared_proc_machine_new = self.shared_processes(machine, assignment) #processes in the new machine
-		
-		#costs in new and old machine before moving process
-		for i in xrange(shared_proc_machine_old.__len__()):
-			for j in xrange(self.machine_capacities[0].__len__()):
-				machineload_cost_old[j] += self.process_requirements[i][j]
-		
-		for i in xrange(shared_proc_machine_new.__len__()):
-			for j in xrange(self.machine_capacities[0].__len__()):
-				machineload_cost_new[j] += self.process_requirements[i][j]
+	return (mccon & sccon & sscon)	
+
+def calculate_costs(proc_assignment, process, machine, assignment = None):
+	"""Calculates the cost difference for moving a process to a new machine.
+	Positive -> bad, new configuration costs more
+	Negative -> good, new configuration costs less"""
+	if not assignment: #the current assignment! not the one for which costs are calculated
+		assignment = proc_assignment.assignment
 	
-		#check if soft capacities lower limit is reached
-		for j in xrange(self.machine_capacities[0].__len__()):
-			if (machineload_cost_old[j]-process_cost[j])>self.soft_machine_capacities[assignment[process]][j]: #assigment[process] = old machine
-				#don't remove too much cost, only until soft capacities limit
-				total_cost -= machineload_cost_old[j] - self.soft_machine_capacities[assignment[process]][j]
-			else:
-				#soft capacities not reached, remove whole cost
-				total_cost -= process_cost[j]
-		
-		#check if soft capacities upper limit is reached
-		for j in xrange(self.machine_capacities[0].__len__()):
-			if machineload_cost_new[j] > self.soft_machine_capacities[machine][j]:
-				total_cost += process_cost[j]
-			else:
-				total_cost += machineload_cost_new[j] + process_cost[j] - self.soft_machine_capacities[machine][j]
-		
-		return total_cost
+	moving_cost = proc_assignment.process_moving_costs[process]
+	total_cost = moving_cost
+	
+	machineload_cost_old = [0] * proc_assignment.machine_capacities[0].__len__()
+	machineload_cost_new = [0] * proc_assignment.machine_capacities[0].__len__()
+	process_cost = proc_assignment.process_requirements[process]
+	shared_proc_machine_old = shared_processes(proc_assignment, assignment[process],assignment) #processes in the old machine
+	shared_proc_machine_new = shared_processes(proc_assignment, machine, assignment) #processes in the new machine
+	
+	#costs in new and old machine before moving process
+	for i in xrange(shared_proc_machine_old.__len__()):
+		for j in xrange(proc_assignment.machine_capacities[0].__len__()):
+			machineload_cost_old[j] += proc_assignment.process_requirements[i][j]
+	
+	for i in xrange(shared_proc_machine_new.__len__()):
+		for j in xrange(proc_assignment.machine_capacities[0].__len__()):
+			machineload_cost_new[j] += proc_assignment.process_requirements[i][j]
+
+	#check if soft capacities lower limit is reached
+	for j in xrange(proc_assignment.machine_capacities[0].__len__()):
+		if (machineload_cost_old[j]-process_cost[j])>proc_assignment.soft_machine_capacities[assignment[process]][j]: #assigment[process] = old machine
+			#don't remove too much cost, only until soft capacities limit
+			total_cost -= machineload_cost_old[j] - proc_assignment.soft_machine_capacities[assignment[process]][j]
+		else:
+			#soft capacities not reached, remove whole cost
+			total_cost -= process_cost[j]
+	
+	#check if soft capacities upper limit is reached
+	for j in xrange(proc_assignment.machine_capacities[0].__len__()):
+		if machineload_cost_new[j] > proc_assignment.soft_machine_capacities[machine][j]:
+			total_cost += process_cost[j]
+		else:
+			total_cost += machineload_cost_new[j] + process_cost[j] - proc_assignment.soft_machine_capacities[machine][j]
+	
+	return total_cost
 				
+	
+def probe_neighbor(proc_assignment):
+	"""see what is the least moving cost, then swap processes machines if possible"""
+	 #process with least moving cost
+	min_move_cost_proc = proc_assignment.process_moving_costs.index(min(proc_assignment.process_moving_costs))
+	
+	#find candidate machines CONSTRAINTS apply
+	candidate_machines = []
+	costs = []
+	for machine in xrange(proc_assignment.num_machines):
+		if try_constraints(proc_assignment, min_move_cost_proc,machine):
+			candidate_machines.append(machine)
+			costs.append(calculate_costs(proc_assignment, min_move_cost_proc,machine))
+	print("we found ",candidate_machines.__len__()," candidates! process ",min_move_cost_proc," can go to machines ",candidate_machines)
+	print("the costs are ",costs)	
+
+
 				
 #=======================================================================
 
@@ -421,7 +423,7 @@ if __name__ == "__main__":
 			print("Could not load the initial assignment.", file=sys.stderr)
 			print(repr(e), file=sys.stderr)
 			sys.exit(1)
-		assignment.probe_neighbor()
+		probe_neighbor(assignment)
 		# Print a representation of the instance and the assignment 
         # to the given <output_file>
 		if len(sys.argv) == 3:
