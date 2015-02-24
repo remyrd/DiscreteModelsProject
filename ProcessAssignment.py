@@ -22,6 +22,8 @@ class AssignmentError(BaseException):
 class InvalidArgumentException(ValueError):
 	pass
 
+global_minima = 0
+
 class ProcessAssignment:
 	"""Stores an instance of the process assignment program."""
 	num_resources = 0
@@ -362,35 +364,79 @@ def calculate_costs(proc_assignment, process, machine):
 	return total_cost
 				
 	
-def probe_neighbor(proc_assignment, min_move_cost_proc=None):
-	"""see what is the least moving cost, then swap processes machines if possible"""
-	 #process with least moving cost specified? if not, find one
-	if not min_move_cost_proc:
-		min_move_cost_proc = proc_assignment.process_moving_costs.index(min(proc_assignment.process_moving_costs))
+def probe_neighbor(proc_assignment):
+	"""see what is the least moving cost, then swap processes machines if possible: steepest descent"""
+	global global_minima
+	#process with least moving cost specified? if not, find one
 	
-	print("currently evaluating ",proc_assignment.assignment)
+	blacklist = [0] * proc_assignment.assignment.__len__()
+	
+	recursions = 0
+		
+	cost_reduction = 0
+	
 	#find candidate machines CONSTRAINTS apply and calculate COSTS
 	candidate_machines = []
 	costs = []
-	
-	for machine in xrange(proc_assignment.num_machines):
-		if try_constraints(proc_assignment, min_move_cost_proc,machine):
-			if calculate_costs(proc_assignment, min_move_cost_proc, machine)<0:
-				candidate_machines.append(machine)
-				costs.append(calculate_costs(proc_assignment, min_move_cost_proc,machine))
-	print("we found ",candidate_machines.__len__()," candidates! process ",min_move_cost_proc," can go to machines ",candidate_machines)
-	print("the costs are ",costs)	
-	
-	# candidate_machines --> [1, 3, 5, 9]
-	# costs --> [-25, 58, -220, 98]
-	# return only negative
-	candidate_assignments = [0] * candidate_machines.__len__()
-	for ass in xrange(candidate_machines.__len__()):
-		candidate_assignments[ass] = tuple([int(t) for t in proc_assignment.assignment[0:proc_assignment.assignment.__len__()]])
-		candidate_assignments[ass][min_move_cost_proc] = candidate_machines[ass]
-		print("second loop ",ass," ",candidate_assignments[ass])
+			
+	#while True:
 		
-	return candidate_assignments
+	while recursions<30:
+		
+		candidate_machines = []
+		costs = []
+		print("run ",recursions)
+		#look for the least moving cost process excluding the already moved processes
+		if blacklist == [0] * proc_assignment.num_processes:
+			min_move_cost_proc = proc_assignment.process_moving_costs.index(min(proc_assignment.process_moving_costs))
+			blacklist[min_move_cost_proc] = 1
+		else:
+			minimal = 1234
+			for process in xrange(proc_assignment.process_moving_costs.__len__()):
+				if (proc_assignment.process_moving_costs[process] <= minimal) & (blacklist[process]==0):
+					minimal = proc_assignment.process_moving_costs[process]
+					min_move_cost_proc = process
+			blacklist[min_move_cost_proc] = 1
+		
+		#try constraints/cost for all machines where min_move_cost_proc can go
+		print("currently evaluating ",proc_assignment.assignment)
+		for machine in xrange(proc_assignment.num_machines):
+			if try_constraints(proc_assignment, min_move_cost_proc, machine):
+				if calculate_costs(proc_assignment, min_move_cost_proc, machine)<0:
+					candidate_machines.append(machine)
+					costs.append(calculate_costs(proc_assignment, min_move_cost_proc,machine))
+		print("we found ",candidate_machines.__len__()," candidates! process ",min_move_cost_proc," can go to machines ",candidate_machines)
+		print("the costs are ",costs)	
+		
+		# candidate_machines --> [1, 3, 5, 9] the ones that passed the constraints
+		# costs --> [-25, -58, -220, -98] keep only the negatives -> usefull solutions
+		
+		#info required to dump
+		if len(sys.argv) == 3:
+			# Print to stdout
+			outfile = None
+		else:
+			outfile = sys.argv[3]
+		
+		#if there's a better neighbor, move to it, otherwise we found a local minima
+		if min(costs) < 0:
+			best_machine = candidate_machines[costs.index(min(costs))]
+			proc_assignment.assignment[min_move_cost_proc] = best_machine
+			dump_assignment(proc_assignment.assignment, filename = outfile)
+			cost_reduction += costs.index(min(costs)) #update the cost delta
+		else:
+			break
+		
+		#reset variables	
+		recursions += 1
+		
+	
+	randomize(proc_assignment, 100)
+
+		
+def randomize(proc_assignment, iterations):
+	pass
+
 
 #=======================================================================
 
@@ -434,19 +480,18 @@ if __name__ == "__main__":
 			print("Could not load the initial assignment.", file=sys.stderr)
 			print(repr(e), file=sys.stderr)
 			sys.exit(1)
-		
+
 # TODO ===============================================
-		some_candidates = probe_neighbor(assignment)
-		print("this? ",some_candidates[0])
+		probe_neighbor(assignment)
 		
 # ====================================================		
 		# Print a representation of the instance and the assignment 
         # to the given <output_file>
-		if len(sys.argv) == 3:
-			# Print to stdout
-			outfile = None
-		else:
-			outfile = sys.argv[3]
-		assignment.dump_instance(filename=outfile)
-		dump_assignment(assignment.assignment, filename=outfile, mode='a')
+		#if len(sys.argv) == 3:
+		#	# Print to stdout
+		#	outfile = None
+		#else:
+		#	outfile = sys.argv[3]
+		#assignment.dump_instance(filename=outfile)
+		#dump_assignment(assignment.assignment, filename=outfile, mode='a')
 
