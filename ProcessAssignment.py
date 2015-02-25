@@ -362,7 +362,9 @@ def calculate_costs(proc_assignment, process, machine):
 			total_cost += machineload_cost_new[j] + process_cost[j] - proc_assignment.soft_machine_capacities[machine][j]
 	
 	return total_cost
-				
+
+def randomize(proc_assignment, iterations):
+	pass				
 	
 def probe_neighbor(proc_assignment):
 	"""see what is the least moving cost, then swap processes machines if possible: steepest descent"""
@@ -422,7 +424,7 @@ def probe_neighbor(proc_assignment):
 		if min(costs) < 0:
 			best_machine = candidate_machines[costs.index(min(costs))]
 			proc_assignment.assignment[min_move_cost_proc] = best_machine
-			dump_assignment(proc_assignment.assignment, filename = outfile)
+			dump_real_assignment(proc_assignment.assignment, filename = outfile)
 			cost_reduction += costs.index(min(costs)) #update the cost delta
 		else:
 			break
@@ -434,12 +436,27 @@ def probe_neighbor(proc_assignment):
 	randomize(proc_assignment, 100)
 
 		
-def randomize(proc_assignment, iterations):
-	pass
+
 
 
 #=======================================================================
 
+def dump_real_assignment(assignment, filename=None, mode='w'):
+	if filename:
+		if mode not in ['a', 'w']:
+			raise InvalidArgumentException("Allowed modes are 'a' and 'w'")
+		f = open(filename, mode)
+	else:
+		f = sys.stdout
+
+	print("Assignment (process -> machine):\n", file=f)
+
+	for i in xrange(assignment.__len__()):
+		print(assignment[i], file=f, end=" ")
+	
+	if f is not sys.stdout:
+		f.close()
+		
 def dump_assignment(assignment, filename=None, mode='w'):
 	"""Writes an assignment in human-readable format to a given file or 
         stdout."""
