@@ -277,12 +277,13 @@ def shared_processes(proc_assignment,target_element,target_list):
 def verify_service_spread(proc_assignment, process, machine):
 	"""Verify if the minimum service spread is still OK when moving a process to a new machine"""
 	shared_proc_service = shared_processes(proc_assignment, proc_assignment.process_services[process], proc_assignment.process_services) # processes with the same service
-	shared_proc_service.remove(process) # don't want to include process being evaluated since it moves
+	if process in shared_proc_service:
+		shared_proc_service.remove(process) # don't want to include process being evaluated since it moves
 	location_list = [proc_assignment.machine_locations[machine]] # add the location of the instanced machine at the beginning because our process moves to it
 	for proc in xrange(shared_proc_service.__len__()):
 		if proc_assignment.machine_locations[proc_assignment.assignment[shared_proc_service[proc]]] not in location_list:# if we find a new location, add it to the list
 			location_list.append(proc_assignment.machine_locations[proc_assignment.assignment[shared_proc_service[proc]]])
-	return (location_list.__len__() < proc_assignment.service_min_spreads[proc_assignment.process_services[process]])
+	return (location_list.__len__() >= proc_assignment.service_min_spreads[proc_assignment.process_services[process]])
 	
 def try_constraints(proc_assignment, process, machine):
 	"""Try constraints for allowing a process into a machine"""
@@ -420,11 +421,11 @@ def probe_neighbor(proc_assignment, original_assignment):
 		recursions = 0
 		costs = 0
 	
-		while (recursions<35) & (costs != []):
+		while (recursions<proc_assignment.num_processes-1):# & (costs != []):
 		
 			candidate_machines = []
 			costs = []
-			print("run ",recursions)
+			#print("run ",recursions)
 			
 			#look for the least moving cost process excluding the already moved processes
 			if blacklist == [0] * proc_assignment.num_processes:
@@ -466,8 +467,7 @@ def probe_neighbor(proc_assignment, original_assignment):
 				proc_assignment.assignment[min_move_cost_proc] = best_machine
 				cost_reduction += min(costs) #update the local cost delta
 			else:
-				print("oop, i ran out of solutions! Time to calculate new random :D")
-				break
+				print("oop,no possible move for this process!")
 			
 			#if there's a better neighbor, move to it, otherwise we found a local minima
 			if global_cost(proc_assignment, original_assignment) < global_minima:
