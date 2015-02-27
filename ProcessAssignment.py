@@ -466,20 +466,19 @@ def probe_neighbor(proc_assignment, original_assignment):
 				#print(min_move_cost_proc," will move to ",best_machine)
 				proc_assignment.assignment[min_move_cost_proc] = best_machine
 				cost_reduction += min(costs) #update the local cost delta
-			else:
-				print("oop,no possible move for this process!")
+			
 			
 			#if there's a better neighbor, move to it, otherwise we found a local minima
 			if global_cost(proc_assignment, original_assignment) < global_minima:
 				global_minima = global_cost(proc_assignment, original_assignment)
-				print("yay, we found a new minima ",global_minima)
+				print("New minima ",global_minima)
 				dump_real_assignment(proc_assignment.assignment, filename = outfile)
 			
 			recursions += 1
 		
 	
 	
-		cost_reduction = randomize(proc_assignment, 120, cost_reduction)
+		cost_reduction = randomize(proc_assignment, 2*proc_assignment.num_processes, cost_reduction)
 
 
 
