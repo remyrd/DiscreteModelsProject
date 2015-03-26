@@ -1,0 +1,7 @@
+min:- b + a ;
+
+a = x + y;
+b = a + 1;
+
+
+bin x,y,a,b;
