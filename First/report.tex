@@ -12,82 +12,75 @@
 
 \begin{document}
 
-\title{T-79.4101 Programming Assignment 1: Process Re-Assignment}   
+\title{T-79.4101 Programming Assignment 2: Spin Glass Ground State Problem}   
 \author{Remy Rojas 486404}  % Your name and student number
-\date{March 1, 2015}            % type date between braces
+\date{April 12, 2015}            % type date between braces
 \maketitle
 
 \section{Problem Description}    
 
-The problem consists of a given number of processes which need to be reassigned in order to find the configuration with the smallest cost. Cost can be of two types: 
-\begin{itemize}
-    \item Moving a process from machine A to B generates a cost induced only by the process
-    \item When a certain capacity is breached in a machine, a cost is induced by the excess resource consumption on the machine. Every machine has its own capacity.
-\end{itemize}
-Additionally 3 constraints must be satisfied for a configuration to be a valid solution:
-\begin{itemize}
-    \item MCConst: Machines have a maximum capacity (always greater than the one mentioned previously). 
-    If this capacity is breached the machine crashes, so a new process can not be moved to a certain machine if the latter does not have enough capacity.
-    \item SSConst: Machines are grouped into Locations and Processes are grouped into Services. The Minimum Spread of a service is a property each service has, which denotes the number of locations in which processes belonging to the service must be. In other words, each service must have representatives in at least X locations.
-    \item SCConst: Stipulates two processes from the same service can not run in the same machine.
-\end{itemize} 
- 
- 
+The problem consists of the so called "Spin Glass" problem. It can be interpreted as a graph problem, by stating that nodes attached to one interact with eachother. The weight of the edge, negative or positive, translates the interaction in sucha a way that on a negative edge, nodes should be of oposite nature, and on a positive edge, nodes should have the same nature.
+The proposed equation defines how to acheive an optimal (minimum) setting with such specifications.
+
+Unfortunately, the equation is not linear and thus not possible to solve with the tool provided: lpsolve. The solution is then to provide a mixed integer linear program MIP to lpsolve which is equivalent to the former problem.
 
 \section{Algorithm}       
 
-The local search is performed with steepest descent, taking the process with the least cost
-and probing every machine available looking for the best cost difference amongst neighbors.
-Neighbors are defined by two assignments with one differing process-machine assignment.
-Once all processes were moved to the best option (if available) we implement simulated annealing
-by generating random neighbors a vast number of times without checking costs (only constraint satisfaction).
-The number of random neighbors to which we move is twice the number of processes.
+There is not much to discus in the algorithm of the program since all the work is handled first by the library functions to interpret the graph, then printing the output function, readable by lpsolve. The difficulty of this assignment is to convert a non-linear equation into an MIP.
+
+A linear equation is another way of saying first degree equation. No variable is multiplied by itself or other variables.
+The original equation is the sum of variable products.
+These variable products are the values of the nodes, two by two.
+Different nodes output -1, and equal nodes output 1 when multiplied. This can be translated into 0 for -1 and 1 to 1, since it's easier to work with binary values.
+
+We soon realize the problem has transformed into defining exclusive "or" XOR for each pair of nodes connected by an edge.
+Luckily, XOR can be encoded into a MIP \cite{MIP}.
 
 \begin{lstlisting}
-while True:
-    
-    while iterations < number_processes:
-        
-        process = find_minimum_cost_process()
-        
-        for machine in assignment.machines:
-            if (constraints_satisfied(process, machine)) and (local_costs_improvement(machine, process)):
-                candidates.add(machine)
-        
-        if candidates not empty:
-            best_machine = min(candidates)        
-            assignment.update(best_machine, process)
-        
-        if global_cost_improvement(assignment, original) < current_global_cost:
-            dump(assignment)    
-        
-        iterations ++
-    
-    randomize(assignment)
-    
+x1, x2 are 2 nodes connected by and edge
+x1*x2 is not possible, instead we try to model
+x1 XOR x2
+(x1 AND !x2) OR (!x1 AND x2)
+mathematically, this can be written as:
+x1*(1-x2) + x2*(1-x1)
+= x1 + x2 -2*x1*x2
+\end{lstlisting} 
+
+We still have a product term that needs to change.
+By applying linear programming:
+
+\begin{lstlisting}
+b12 replaces x1*x2
+b12 < x1 max value of b12 will be 1
+b12 < x2
+b12 > x1 + x2 -1 ensures b12 will not be 1 and not 0 in case x1+x2=2
+b12 > 0
 \end{lstlisting}
 
+This way, we have encoded XOR in linear programming.
+To obtain the -1 and 1 desired output:
 
-
+\begin{lstlisting}
+let a12 = x1 + x2 -2*b12
+writing 2*a12 - 1
+ensures values 1 for XOR 1 and -1 for XOR 0
+\end{lstlisting}
 \section{Experiments}   
 
-The programming and experimentation were carried out on Cloud9 IDE: a cloud based service running a VM with 512MB RAM memory.
+The programming and experimentation were carried out on a Linux Kernell System, Running Ubuntu 14.04 Xfce Desktop, Kernell version 3.13.0-48 with 8GB RAM memory and Intel i7 processor at 2.4GHz.
 
-The program succesfully improves the intanced initial solution. Although the upper bound of the solution is not reached within 5min of testing for large instances.
-The checker provided in the assignment does not complain about constraint violation when probing solutions,
-and the global costs calculated in the program (outputed to the console) correspond to the ones returned by the checker.
-
+The program works properly and the solutions are found within 5seconds for the longest graphs, almost instantly for the shorter.
 \section{Conclusions}         
 
-Unfortunately the results do not reache the upper boundary expected. Still this greatly depends on the
-function charged to generate a random assignment. Given enough time it should get to a very good solution.
-The settings in the experiment (cloud VM with 512MB RAM) are not optimal and way below standart physical machines.
-Nevertheless, the algorithm can be improved by looking into machines with the largest free capacity and prioritizing ignoring
-those where soft capacities overflow rather than checking for the smallest move cost.
+The assigment implied a lot more reasoning than actual code. The output format is simple and very close to reality.
+The Graph library also helped a lot of by interpreting effectively the instance graph provided.
+The solution was to reduce the problem to a logical proposition, and interpreting the proposition back as a mathematical formula.
 
-% Uncomment if you have references
-% \begin{thebibliography}{9}
-%  % type bibliography here
-% \end{thebibliography}
+
+
+\begin{thebibliography}{1}
+\bibitem{MIP}
+FICO Express Optimization Suite: MIP formulations and linearizations Quick Reference
+\end{thebibliography}
 
 \end{document}
